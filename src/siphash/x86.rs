@@ -22,15 +22,6 @@ mod sse {
         unsafe { _mm_or_si128(left, right) }
     }
 
-    #[cfg(any(
-        all(target_feature = "avx512f", target_feature = "avx512vl"),
-        target_feature = "avx10"
-    ))]
-    #[inline]
-    extern "sysv64" fn rotate_lanes_epi64(v: __m128i, count: __m128i) -> __m128i {
-        unsafe { _mm_rolv_epi64(v, count) }
-    }
-
     #[cfg(not(target_feature = "avx2"))]
     #[inline]
     extern "sysv64" fn rotate_lanes_epi64(v: __m128i, count: __m128i) -> __m128i {
@@ -108,10 +99,12 @@ mod sse {
             (s0, s1)
         }
 
-        // #[inline]
+        #[inline]
         pub fn round(&mut self) {
-            (self.0, self.1) = Self::halfround(self.0, self.1, unsafe { _mm_set_epi64x(16, 13) });
-            (self.0, self.1) = Self::halfround(self.0, self.1, unsafe { _mm_set_epi64x(21, 17) });
+            let Self(s0, s1) = *self;
+            let (s0, s1) = Self::halfround(s0, s1, unsafe { _mm_set_epi64x(16, 13) });
+            let (s0, s1) = Self::halfround(s0, s1, unsafe { _mm_set_epi64x(21, 17) });
+            *self = Self(s0, s1);
         }
     }
 }
