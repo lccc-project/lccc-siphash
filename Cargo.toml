@@ -1,0 +1,18 @@
+[package]
+name = "siphash-opt"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+
+[lib]
+crate-type=["rlib","dylib"]
+
+[profile.release]
+debug = "full"
+opt-level = 3
+codegen-units = 1
+lto = "fat"
