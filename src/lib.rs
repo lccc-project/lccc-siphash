@@ -1,3 +1,4 @@
+#![no_std]
 pub mod siphash;
 
 pub use siphash::SipHasher;

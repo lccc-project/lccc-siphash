@@ -2,6 +2,10 @@
 name = "lccc-siphash"
 version = "0.1.0"
 edition = "2018"
+description="""
+Highly Optimized siphash implementation for use by lccc
+"""
+license = "BSD-2-Clause-Patent"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -9,7 +13,7 @@ edition = "2018"
 
 
 [lib]
-crate-type=["rlib","dylib"]
+crate-type=["rlib"]
 
 [profile.release]
 debug = true

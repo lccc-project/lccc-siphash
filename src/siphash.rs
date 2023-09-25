@@ -1,4 +1,4 @@
-use std::hash::Hasher;
+use core::hash::Hasher;
 
 const SIPHASH_MAG1: u64 = 0x736f6d6570736575;
 const SIPHASH_MAG2: u64 = 0x646f72616e646f6d;
