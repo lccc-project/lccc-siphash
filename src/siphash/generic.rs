@@ -5,7 +5,7 @@ pub struct SipHashState(u64, u64, u64, u64);
 
 impl SipHashState {
     #[inline]
-    pub fn from_keys(k0: u64, k1: u64) -> Self {
+    pub const fn from_keys(k0: u64, k1: u64) -> Self {
         Self(
             k0 ^ SIPHASH_MAG1,
             k0 ^ SIPHASH_MAG3,

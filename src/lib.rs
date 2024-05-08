@@ -1,6 +1,7 @@
 #![no_std]
 pub mod siphash;
 
+pub use siphash::sys::SipHashState;
 pub use siphash::SipHasher;
 
 #[cfg(test)]

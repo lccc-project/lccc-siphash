@@ -6,6 +6,8 @@ description="""
 Highly Optimized siphash implementation for use by lccc
 """
 license = "BSD-2-Clause-Patent"
+exclude=["bench"]
+rust-version="1.74"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

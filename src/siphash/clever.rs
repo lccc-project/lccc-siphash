@@ -29,15 +29,10 @@ pub struct SipHashState(__v128, __v128);
 #[cfg(target_feature = "vec")]
 impl SipHashState {
     #[inline]
-    pub fn from_keys(k0: u64, k1: u64) -> Self {
-        let keys = vec_load(k0, k1);
-        let mut s0 = vec_load(SIPHASH_MAG1, SIPHASH_MAG2);
-        let mut s1 = vec_load(SIPHASH_MAG3, SIPHASH_MAG4);
+    pub const fn from_keys(k0: u64, k1: u64) -> Self {
+        let s0 = unsafe { core::mem::transmute([k0 ^ SIPHASH_MAG1, k0 ^ SIPHASH_MAG3]) };
+        let s1 = unsafe { core::mem::transmute([k1 ^ SIPHASH_MAG2, k1 ^ SIPHASH_MAG4]) };
 
-        s0 = unsafe { __vec_binary::<BinaryOp::Xor, 8>(s0, keys) };
-        s1 = unsafe { __vec_binary::<BinaryOp::Xor, 8>(s1, keys) };
-
-        (s0, s1) = collect_by_place(s0, s1);
         Self(s0, s1)
     }
 

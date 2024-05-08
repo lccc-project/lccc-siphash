@@ -12,7 +12,7 @@ mod sse {
 
     #[cfg(target_feature = "avx2")]
     #[inline]
-    extern "sysv64" fn rotate_lanes_epi64(v: __m128i, count: __m128i) -> __m128i {
+    fn rotate_lanes_epi64(v: __m128i, count: __m128i) -> __m128i {
         let lshift = count;
         let rshift = unsafe { _mm_sub_epi64(_mm_set_epi64x(64, 64), count) };
 
@@ -24,7 +24,7 @@ mod sse {
 
     #[cfg(not(target_feature = "avx2"))]
     #[inline]
-    extern "sysv64" fn rotate_lanes_epi64(v: __m128i, count: __m128i) -> __m128i {
+    fn rotate_lanes_epi64(v: __m128i, count: __m128i) -> __m128i {
         let lshift = count;
         let rshift = unsafe { _mm_sub_epi64(_mm_set_epi64x(64, 64), count) };
 
@@ -52,14 +52,9 @@ mod sse {
 
     impl SipHashState {
         #[inline]
-        pub fn from_keys(k0: u64, k1: u64) -> Self {
-            let mut s0: __m128i =
-                unsafe { _mm_set_epi64x(SIPHASH_MAG3 as i64, SIPHASH_MAG1 as i64) };
-            let mut s1: __m128i =
-                unsafe { _mm_set_epi64x(SIPHASH_MAG4 as i64, SIPHASH_MAG2 as i64) };
-
-            s0 = unsafe { _mm_xor_si128(s0, _mm_set1_epi64x(k0 as i64)) };
-            s1 = unsafe { _mm_xor_si128(s1, _mm_set1_epi64x(k1 as i64)) };
+        pub const fn from_keys(k0: u64, k1: u64) -> Self {
+            let s0 = unsafe { core::mem::transmute([k0 ^ SIPHASH_MAG1, k0 ^ SIPHASH_MAG3]) };
+            let s1 = unsafe { core::mem::transmute([k1 ^ SIPHASH_MAG2, k1 ^ SIPHASH_MAG4]) };
 
             Self(s0, s1)
         }
@@ -90,10 +85,28 @@ mod sse {
         }
 
         #[inline]
-        fn halfround(mut s0: __m128i, mut s1: __m128i, rotate: __m128i) -> (__m128i, __m128i) {
+        extern "sysv64" fn halfround(
+            mut s0: __m128i,
+            mut s1: __m128i,
+            rotate: __m128i,
+        ) -> (__m128i, __m128i) {
+            // Compute one half of the round function.with [v0,v2] in s0, and [v1,v3] in s1, and [rot1,rot3] in rotate
+            // The halfround function is (in scalar ops):
+            //  v0 = v0 + v1
+            //  v2 = v2 + v3
+            //  v1 = v1 rrot rot1
+            //  v3 = v3 rrot rot3
+            //  v1 = v1 ^ v0
+            //  v3 = v3 ^ v2
+            //  v0 = v0 rrot 32
+            //  (v2,v0) = (v0,v2)
+            // We vectorize by combining each pair of steps into u64x2 SIMD ops via x86_64 SIMD intrinsics
+            // A full round is 2 halfrounds, the first with [rot1,rot3] = [13, 16], and the second with [rot1, rot3] = [17, 21]
             s0 = unsafe { _mm_add_epi64(s0, s1) };
             s1 = rotate_lanes_epi64(s1, rotate);
             s1 = unsafe { _mm_xor_si128(s1, s0) };
+            // permute [v0l,v0h,v2l,v2h] as u32x4 instead of u64x2 to [v2l,v2h, v0h, v0l] - this rotates v0 32 bits, and then swaps them setting up for the second halfround
+            // or resetting for next full round
             s0 = unsafe { _mm_shuffle_epi32(s0, 0b0_01_11_10) };
 
             (s0, s1)
@@ -101,8 +114,11 @@ mod sse {
 
         #[inline]
         pub fn round(&mut self) {
+            // s0 = [v0,v2], s1 = [v1,v3]
             let Self(s0, s1) = *self;
+            // `_mm_set_epi64x` has reversed parameter order - yields [rot1, rot3] = [13, 16]
             let (s0, s1) = Self::halfround(s0, s1, unsafe { _mm_set_epi64x(16, 13) });
+            // [rot1,rot3] = [17,21]
             let (s0, s1) = Self::halfround(s0, s1, unsafe { _mm_set_epi64x(21, 17) });
             *self = Self(s0, s1);
         }

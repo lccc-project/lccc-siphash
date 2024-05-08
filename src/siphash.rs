@@ -25,7 +25,7 @@ pub struct SipHasher<const C: usize, const D: usize> {
 }
 
 impl<const C: usize, const D: usize> SipHasher<C, D> {
-    pub fn new_with_keys(k0: u64, k1: u64) -> Self {
+    pub const fn new_with_keys(k0: u64, k1: u64) -> Self {
         Self {
             state: sys::SipHashState::from_keys(k0, k1),
             tail: 0u64,
