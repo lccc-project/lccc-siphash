@@ -16,6 +16,24 @@ const SIPHASH_MAG4: u64 = 0x7465646279746573;
 )]
 pub mod sys;
 
+impl sys::SipHashState {
+    pub fn update_and_round<const R: usize>(&mut self, val: u64) {
+        self.update_before_rounds(val);
+        for _ in 0..R {
+            self.round();
+        }
+        self.update_after_rounds(val);
+    }
+
+    pub fn update_and_final<const R: usize>(&mut self) -> u64 {
+        self.update_before_final();
+        for _ in 0..R {
+            self.round();
+        }
+        self.finish()
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct SipHasher<const C: usize, const D: usize> {
     state: sys::SipHashState,
@@ -35,11 +53,7 @@ impl<const C: usize, const D: usize> SipHasher<C, D> {
     }
 
     pub fn update(&mut self, word: u64) {
-        self.state.update_before_rounds(word);
-        for _ in 0..C {
-            self.state.round();
-        }
-        self.state.update_after_rounds(word);
+        self.state.update_and_round::<C>(word)
     }
 }
 
@@ -97,12 +111,6 @@ impl<const C: usize, const D: usize> Hasher for SipHasher<C, D> {
         } else {
             state.update(((self.bytes as u64) & 0xFF) << 56);
         }
-        state.state.update_before_final();
-
-        for _ in 0..D {
-            state.state.round();
-        }
-
-        state.state.finish().to_le()
+        state.state.update_and_final::<D>().to_le()
     }
 }

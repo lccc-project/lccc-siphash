@@ -55,7 +55,7 @@ impl SipHashState {
     }
 
     #[inline]
-    pub fn finish(&self) -> u64 {
+    pub fn finish(self) -> u64 {
         self.0 ^ self.1 ^ self.2 ^ self.3
     }
 }
