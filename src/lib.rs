@@ -3,6 +3,7 @@ pub mod siphash;
 
 pub use siphash::sys::SipHashState;
 pub use siphash::SipHasher;
+pub use siphash::RawSipHasher;
 
 #[cfg(test)]
 mod test {
