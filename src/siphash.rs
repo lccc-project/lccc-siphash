@@ -35,7 +35,7 @@ impl sys::SipHashState {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct RawSipHasher<const C: usize, const D: usize>(state: sys::SipHashState);
+pub struct RawSipHasher<const C: usize, const D: usize>(sys::SipHashState);
 
 impl<const C: usize, const D: usize> RawSipHasher<C,D>{
     pub const fn from_keys(k0: u64, k1: u64) -> Self {
@@ -43,12 +43,12 @@ impl<const C: usize, const D: usize> RawSipHasher<C,D>{
     }
 
     pub fn update(&mut self, word: u64) {
-        self.state.update_and_round::<C>(word)
+        self.0.update_and_round::<C>(word)
     }
 
     pub fn finish(&self) -> u64 {
         let mut state = *self;
-        state.state.update_and_final::<D>().to_le()
+        state.0.update_and_final::<D>().to_le()
     }
 }
 
