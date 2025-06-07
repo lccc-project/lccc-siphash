@@ -34,12 +34,35 @@ impl sys::SipHashState {
     }
 }
 
+#[cfg(feature = "serde")]
+mod serde;
+
 #[derive(Copy, Clone, Debug)]
 pub struct RawSipHasher<const C: usize, const D: usize>(sys::SipHashState);
 
-impl<const C: usize, const D: usize> RawSipHasher<C,D>{
+impl<const C: usize, const D: usize> RawSipHasher<C, D> {
     pub const fn from_keys(k0: u64, k1: u64) -> Self {
         Self(sys::SipHashState::from_keys(k0, k1))
+    }
+
+    #[cfg(not(feature = "inspect-raw"))]
+    const fn from_state(state: sys::SipHashState) -> Self {
+        Self(state)
+    }
+
+    #[cfg(feature = "inspect-raw")]
+    pub const fn from_state(state: sys::SipHashState) -> Self {
+        Self(state)
+    }
+
+    #[cfg(not(feature = "inspect-raw"))]
+    const fn state(&self) -> &sys::SipHashState {
+        &self.0
+    }
+
+    #[cfg(feature = "inspect-raw")]
+    pub const fn state(&self) -> &sys::SipHashState {
+        &self.0
     }
 
     pub fn update(&mut self, word: u64) {
@@ -49,6 +72,22 @@ impl<const C: usize, const D: usize> RawSipHasher<C,D>{
     pub fn finish(&self) -> u64 {
         let mut state = *self;
         state.0.update_and_final::<D>().to_le()
+    }
+
+    pub fn update_from_bytes(&mut self, bytes: &[u8]) {
+        let mut c = bytes.chunks_exact(8);
+
+        for chunk in &mut c {
+            let v = u64::from_le_bytes(unsafe { chunk.try_into().unwrap_unchecked() });
+            self.update(v);
+        }
+
+        let mut n = [0u8; 8];
+        let remainder = c.remainder();
+        if !remainder.is_empty() {
+            n[..remainder.len()].copy_from_slice(remainder);
+            self.update(u64::from_le_bytes(n));
+        }
     }
 }
 
@@ -72,6 +111,21 @@ impl<const C: usize, const D: usize> SipHasher<C, D> {
 
     pub fn update(&mut self, word: u64) {
         self.state.update_and_round::<C>(word)
+    }
+
+    #[cfg(feature = "inspect-raw")]
+    pub const fn state(&self) -> &sys::SipHashState {
+        &self.state
+    }
+
+    #[cfg(feature = "inspect-raw")]
+    pub const fn from_state(state: sys::SipHashState) -> Self {
+        Self {
+            state,
+            tail: 0,
+            ntail: 0,
+            bytes: 0,
+        }
     }
 }
 

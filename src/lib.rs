@@ -1,9 +1,12 @@
 #![no_std]
 pub mod siphash;
 
+#[cfg(feature = "rng")]
+pub mod rng;
+
 pub use siphash::sys::SipHashState;
-pub use siphash::SipHasher;
 pub use siphash::RawSipHasher;
+pub use siphash::SipHasher;
 
 #[cfg(test)]
 mod test {

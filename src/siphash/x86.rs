@@ -60,6 +60,24 @@ mod sse {
         }
 
         #[inline]
+        pub fn from_state([v0, v1, v2, v3]: [u64; 4]) -> Self {
+            unsafe {
+                Self(
+                    core::mem::transmute([v0, v2]),
+                    core::mem::transmute([v1, v3]),
+                )
+            }
+        }
+
+        #[inline]
+        pub fn inspect_state(&self) -> [u64; 4] {
+            let [v0, v2] = unsafe { core::mem::transmute(self.0) };
+            let [v1, v3] = unsafe { core::mem::transmute(self.0) };
+
+            [v0, v1, v2, v3]
+        }
+
+        #[inline]
         pub fn update_before_rounds(&mut self, word: u64) {
             let val: __m128i = unsafe { _mm_set_epi64x(word as i64, 0) };
             self.1 = unsafe { _mm_xor_si128(self.1, val) };

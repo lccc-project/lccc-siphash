@@ -2,20 +2,27 @@
 name = "lccc-siphash"
 version = "0.1.0"
 edition = "2021"
-description="""
+description = """
 Highly Optimized siphash implementation for use by lccc
 """
 license = "BSD-2-Clause-Patent"
-exclude=["bench"]
-rust-version="1.74"
+exclude = ["bench"]
+rust-version = "1.74"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
+rand_core = { version = "0.9.3", optional = true }
+serde = { version = "1.0.219", optional = true, default-features = false }
 
 [lib]
-crate-type=["rlib"]
+crate-type = ["rlib"]
+
+[features]
+inspect-raw = []
+rng = []
+rand_core = ["dep:rand_core", "rng"]
+serde = ["dep:serde"]
 
 [profile.release]
 debug = true
