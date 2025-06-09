@@ -1,6 +1,6 @@
 use crate::RawSipHasher;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct SiphashRng<const C: usize, const D: usize>(RawSipHasher<C, D>);
 
 impl<const C: usize, const D: usize> SiphashRng<C, D> {
@@ -30,7 +30,7 @@ impl<const C: usize, const D: usize> SiphashRng<C, D> {
 
     pub fn tick_with_ingest(&mut self, word0: u64, word1: u64) -> u64 {
         self.0.update(word0);
-        let val = { *self }.0.finish();
+        let val = self.0.finish();
         self.0.update(word1);
         val
     }
@@ -65,23 +65,8 @@ mod imp {
             val as u32 ^ (val >> 32) as u32
         }
 
-        fn fill_bytes(&mut self, dst: &mut [u8]) {
-            let mut exact = dst.chunks_exact_mut(8);
-
-            for chunk in &mut exact {
-                let v = self.tick();
-
-                chunk.copy_from_slice(&v.to_ne_bytes());
-            }
-
-            let remainder = exact.into_remainder();
-
-            if !remainder.is_empty() {
-                let last = self.tick();
-                let bytes = last.to_le_bytes();
-                let len = remainder.len();
-                remainder.copy_from_slice(&bytes[..len]);
-            }
+        fn fill_bytes(&mut self, dest: &mut [u8]) {
+            rand_core::impls::fill_bytes_via_next(self, dest);
         }
     }
 
