@@ -4,9 +4,32 @@ pub mod siphash;
 #[cfg(feature = "rng")]
 pub mod rng;
 
+use core::hash::BuildHasher;
+
 pub use siphash::sys::SipHashState;
 pub use siphash::RawSipHasher;
 pub use siphash::SipHasher;
+
+pub struct BuildSipHasher<const C: usize, const D: usize> {
+    k0: u64,
+    k1: u64,
+}
+
+impl<const C: usize, const D: usize> BuildSipHasher<C, D> {
+    pub const fn new_with_keys(k0: u64, k1: u64) -> Self {
+        Self { k0, k1 }
+    }
+}
+
+impl<const C: usize, const D: usize> BuildHasher for BuildSipHasher<C, D> {
+    type Hasher = SipHasher<C, D>;
+    fn build_hasher(&self) -> Self::Hasher {
+        SipHasher::new_with_keys(self.k0, self.k1)
+    }
+}
+
+#[cfg(feature = "random-state")]
+pub mod build;
 
 #[cfg(test)]
 mod test {
