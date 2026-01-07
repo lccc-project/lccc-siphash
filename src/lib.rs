@@ -1,21 +1,52 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
+#![deny(missing_docs)]
+#![cfg_attr(feature = "nightly-docs", feature(doc_cfg))]
+#![cfg_attr(
+    feature = "nightly-prefixfree_extras",
+    feature(hasher_prefixfree_extras)
+)]
+
+//! lccc-siphash implements the SipHash algorithm with a generic number of update and finalize rounds.
+//!
+//! The implementation is designed to be highly optimized, making use of low-level hardware instructions to generate the most efficient code possible.
+//! This is based on the static set of supported target features and the cpu. Because of this, compilation with -C target-cpu is recommended.
+//!
+//! ## Features
+//!
+//! The following features are supported (features prefixed with `nightly-` require an up-to-date nightly compiler and are not considered part of the semver API):
+//! * `inspect-raw`: Allows extraction of the raw [`SipHashState`] from hashers and random generators
+//! * `rng`: Adds the type [`rng::SiphashRng`], to generate random numbers using the siphash impl
+//! * `rand_core`: Adds the optional `rand_core` dependency and implements it for [`rng::SiphashRng`]
+//! * `serde`: Adds serde support for serializing and deserializing raw states.
+//! * `random-state`: Adds the type [`build::RandomState`] as a [`BuildHasher`] impl. This adds a dependency on the `getrandom` crate.
+//! * `nightly-prefixfree_extras`: Implements [`Hasher::write_str`][core::hash::Hasher::write_str] in an optimized way. Note that this changes the results of hashes that involve `str` or `String`.
+//!
+//! ## [`RandomState`][build::RandomState] and wasm
+//!
+//! The [`RandomState`][build::RandomState] type allows using a highly collision-resistant generator for random.
+//! This is implemented using the `getrandom` crate. In order to support this on wasm (and certain bare metal targets), you must provide a getrandom provider.
+//! On web, you can do this by depending directly on `getrandom` 0.3 (or later) and enabling the `wasm_js` feature.
+
+#[allow(unexpected_cfgs)]
 pub mod siphash;
 
-#[cfg(feature = "rng")]
+#[cfg(any(doc, feature = "rng"))]
 pub mod rng;
 
 use core::hash::BuildHasher;
 
-pub use siphash::sys::SipHashState;
 pub use siphash::RawSipHasher;
+pub use siphash::SipHashState;
 pub use siphash::SipHasher;
 
+/// Default [`BuildHasher`] for [`SipHasher`]. `C` and `D` are the configuration parameters for SipHash-*C*-*D*, specifying the number of update rounds (C) and finalization rounds (D).
 pub struct BuildSipHasher<const C: usize, const D: usize> {
     k0: u64,
     k1: u64,
 }
 
 impl<const C: usize, const D: usize> BuildSipHasher<C, D> {
+    /// Constructs a new [`BuildSipHasher`] with the specified set of keys. All [`BuildSipHasher`] instances constructed with the same keys will produce identical hashers.
     pub const fn new_with_keys(k0: u64, k1: u64) -> Self {
         Self { k0, k1 }
     }
@@ -28,7 +59,7 @@ impl<const C: usize, const D: usize> BuildHasher for BuildSipHasher<C, D> {
     }
 }
 
-#[cfg(feature = "random-state")]
+#[cfg(any(doc, feature = "random-state"))]
 pub mod build;
 
 #[cfg(test)]

@@ -15,12 +15,12 @@ impl SipHashState {
     }
 
     #[inline]
-    pub fn from_state([v0, v1, v2, v3]: [u64; 4]) -> Self {
+    pub const fn from_state([v0, v1, v2, v3]: [u64; 4]) -> Self {
         Self(v0, v2, v1, v3)
     }
 
     #[inline]
-    pub fn inspect_state(&self) -> [u64; 4] {
+    pub const fn inspect_state(&self) -> [u64; 4] {
         [self.0, self.2, self.1, self.3]
     }
 

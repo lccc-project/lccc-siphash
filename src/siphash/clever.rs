@@ -37,7 +37,7 @@ impl SipHashState {
     }
 
     #[inline]
-    pub fn from_state([v0, v1, v2, v3]: [u64; 4]) -> Self {
+    pub const fn from_state([v0, v1, v2, v3]: [u64; 4]) -> Self {
         unsafe {
             Self(
                 core::mem::transmute([v0, v2]),
@@ -47,7 +47,7 @@ impl SipHashState {
     }
 
     #[inline]
-    pub fn inspect_state(&self) -> [u64; 4] {
+    pub const fn inspect_state(&self) -> [u64; 4] {
         let [v0, v2] = unsafe { core::mem::transmute(self.0) };
         let [v1, v3] = unsafe { core::mem::transmute(self.0) };
 

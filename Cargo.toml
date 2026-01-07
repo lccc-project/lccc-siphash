@@ -25,9 +25,14 @@ rng = []
 rand_core = ["dep:rand_core", "rng"]
 serde = ["dep:serde"]
 random-state = ["dep:getrandom"]
+nightly-docs = []
+nightly-prefixfree_extras = []
 
 [profile.release]
 debug = true
 opt-level = 3
 codegen-units = 1
 lto = "fat"
+
+[package.metadata.docs.rs]
+all-features = true

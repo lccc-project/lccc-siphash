@@ -1,6 +1,6 @@
 macro_rules! barrier{
     () => {
-        unsafe{core::arch::asm!("xchg ebx, esi; cpuid; xchg ebx, esi", inlateout("eax") 0 => _, lateout("ecx") _, lateout("edx") _, out("esi") _);}
+        unsafe{core::arch::asm!("mov rsi, rbx; cpuid; mov rbx, rsi", inlateout("eax") 0 => _, lateout("ecx") _, lateout("edx") _, out("esi") _);}
     }
 }
 
@@ -70,7 +70,36 @@ pub fn siphash<const C: usize, const D: usize>() -> u128 {
     );
     time! {
         loop{
-            hasher.write_u64(ikey);
+            hasher.write_u64(core::hint::black_box(ikey));
+        }then{
+            core::hint::black_box(hasher.finish());
+        }
+    }
+}
+
+pub fn raw_siphash<const C: usize, const D: usize>() -> u128 {
+    use core::hash::Hasher;
+    let ikey = core::hint::black_box(0x428a2f98d728ae22);
+    let mut hasher = lccc_siphash::RawSipHasher::<C, D>::from_keys(
+        core::hint::black_box(0x6a09e667f3bcc908),
+        core::hint::black_box(0xbb67ae8584caa73b),
+    );
+    time! {
+        loop{
+            hasher.write_u64(core::hint::black_box(ikey));
+        }then{
+            core::hint::black_box(hasher.finish());
+        }
+    }
+}
+
+pub fn std_hasher() -> u128 {
+    use core::hash::Hasher;
+    let ikey = core::hint::black_box(0x428a2f98d728ae22);
+    let mut hasher = std::hash::DefaultHasher::new();
+    time! {
+        loop{
+            hasher.write_u64(core::hint::black_box(ikey));
         }then{
             core::hint::black_box(hasher.finish());
         }
@@ -105,6 +134,9 @@ fn main() {
         run_benchmark("Sipround", sipround),
         run_benchmark("SipHash-1-3", siphash::<1, 3>),
         run_benchmark("SipHash-2-4", siphash::<2, 4>),
+        run_benchmark("RawSipHash-1-3", raw_siphash::<1, 3>),
+        run_benchmark("RawSipHash-2-4", raw_siphash::<2, 4>),
+        run_benchmark("std", std_hasher),
     ];
 
     for bench in benches {

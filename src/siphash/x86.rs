@@ -10,7 +10,15 @@ mod sse {
     #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::*;
 
-    #[cfg(target_feature = "avx2")]
+    #[cfg(all(target_feature = "avx512f", target_feature = "avx512vl"))]
+    fn rotate_lanes_epi64(v: __m128i, count: __m128i) -> __m128i {
+        unsafe { _mm_rolv_epi64(v, count) }
+    }
+
+    #[cfg(all(
+        target_feature = "avx2",
+        not(all(target_feature = "avx512f", target_feature = "avx512vl"))
+    ))]
     #[inline]
     fn rotate_lanes_epi64(v: __m128i, count: __m128i) -> __m128i {
         let lshift = count;
@@ -60,7 +68,7 @@ mod sse {
         }
 
         #[inline]
-        pub fn from_state([v0, v1, v2, v3]: [u64; 4]) -> Self {
+        pub const fn from_state([v0, v1, v2, v3]: [u64; 4]) -> Self {
             unsafe {
                 Self(
                     core::mem::transmute([v0, v2]),
@@ -70,7 +78,7 @@ mod sse {
         }
 
         #[inline]
-        pub fn inspect_state(&self) -> [u64; 4] {
+        pub const fn inspect_state(&self) -> [u64; 4] {
             let [v0, v2] = unsafe { core::mem::transmute(self.0) };
             let [v1, v3] = unsafe { core::mem::transmute(self.0) };
 

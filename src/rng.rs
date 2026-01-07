@@ -1,17 +1,24 @@
+//! Module providing a random number generator based on [`RawSipHasher`].
+
 use crate::RawSipHasher;
 
+/// [`SiphashRng`] is a random number generator that uses [`RawSipHasher`] to generate a stream of high-quality pseudo-random numbers
 #[derive(Clone, Debug)]
 pub struct SiphashRng<const C: usize, const D: usize>(RawSipHasher<C, D>);
 
 impl<const C: usize, const D: usize> SiphashRng<C, D> {
+    /// Constructs a new [`SipHashRng`] with the specified keys.
     pub const fn new_with_keys(k0: u64, k1: u64) -> Self {
         Self(RawSipHasher::from_keys(k0, k1))
     }
 
+    /// Constructs a new [`SipHashRng`] from a specified [`RawSipHasher`], which may have already injested arbitrary data
     pub const fn from_raw(raw: RawSipHasher<C, D>) -> Self {
         Self(raw)
     }
 
+    /// Convience function for constructing a [`SiphashRng`] from a single word seed. Note that this function produces a generator with a maximum enthropy of 64 bits.
+    /// This function should be preferred compared to simply passing `seed` into either `k0` or `k1` for [`SiphashRng::new_with_keys`] (with the other parameter being 0).
     pub const fn from_seed(seed: u64) -> Self {
         Self::new_with_keys(
             seed ^ 0x6a09e667f3bcc908,
@@ -19,6 +26,7 @@ impl<const C: usize, const D: usize> SiphashRng<C, D> {
         )
     }
 
+    /// Convience function for constructing a [`SipHashRng`] from an arbitrary seed. The resulting generator has a maximum of `st.len() * 8` bits of enthropy (up to 256 bits)
     pub fn from_word_seed(st: &[u8]) -> Self {
         let mut base = RawSipHasher::from_keys(0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1);
 
@@ -28,6 +36,7 @@ impl<const C: usize, const D: usize> SiphashRng<C, D> {
         Self(base)
     }
 
+    /// Low-level function for producing a new psuedo-random value and updating the generator by writing `word0` before computing the result, then word1 after.
     pub fn tick_with_ingest(&mut self, word0: u64, word1: u64) -> u64 {
         self.0.update(word0);
         let val = self.0.finish();
@@ -35,14 +44,17 @@ impl<const C: usize, const D: usize> SiphashRng<C, D> {
         val
     }
 
+    /// Ticks the generator.and produces a pseudorandom value.
     pub fn tick(&mut self) -> u64 {
         self.tick_with_ingest(0x510e527fade682d1, 0x9b05688c2b3e6c1f)
     }
 
+    /// Returns a reference to the raw inner value
     pub fn raw(&self) -> &RawSipHasher<C, D> {
         &self.0
     }
 
+    /// Returns a mutable reference to the raw inner state. Modifying this state affects the sequence of random numbers produced by the [`SiphashRng::tick`] function.
     pub fn raw_mut(&mut self) -> &mut RawSipHasher<C, D> {
         &mut self.0
     }
