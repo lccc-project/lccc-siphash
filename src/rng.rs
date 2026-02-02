@@ -7,6 +7,22 @@ use crate::RawSipHasher;
 pub struct SiphashRng<const C: usize, const D: usize>(RawSipHasher<C, D>);
 
 impl<const C: usize, const D: usize> SiphashRng<C, D> {
+    /// Constructs a new [`SiphashRng`] from a random key provided by the operating system.
+    #[cfg(any(doc, feature = "random-state"))]
+    #[cfg_attr(feature = "nightly-docs", doc(cfg(feature = "random-state")))]
+    pub fn from_system_rng() -> Self {
+        let mut bytes = [[0u8; 8]; 2];
+
+        getrandom::fill(bytes.as_flattened_mut()).unwrap();
+
+        let [k0, k1] = bytes;
+
+        Self(RawSipHasher::from_keys(
+            u64::from_ne_bytes(k0),
+            u64::from_ne_bytes(k1),
+        ))
+    }
+
     /// Constructs a new [`SipHashRng`] with the specified keys.
     pub const fn new_with_keys(k0: u64, k1: u64) -> Self {
         Self(RawSipHasher::from_keys(k0, k1))
