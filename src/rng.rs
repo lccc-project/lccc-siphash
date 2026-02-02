@@ -82,19 +82,20 @@ mod imp {
 
     use crate::rng::SiphashRng;
 
-    impl<const C: usize, const D: usize> RngCore for SiphashRng<C, D> {
-        fn next_u64(&mut self) -> u64 {
-            self.tick()
+    impl<const C: usize, const D: usize> TryRng for SiphashRng<C, D> {
+        type Error = Infallible;
+        fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> {
+            rand_core::utils::fill_bytes_via_next_word(dst, || self.try_next_u64())
         }
 
-        fn next_u32(&mut self) -> u32 {
+        fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+            Ok(self.tick())
+        }
+
+        fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
             let val = self.tick();
 
-            val as u32 ^ (val >> 32) as u32
-        }
-
-        fn fill_bytes(&mut self, dest: &mut [u8]) {
-            rand_core::impls::fill_bytes_via_next(self, dest);
+            Ok(val as u32 ^ (val >> 32) as u32)
         }
     }
 
@@ -106,8 +107,15 @@ mod imp {
             Self::new_with_keys(k0, k1)
         }
 
-        fn from_rng(rng: &mut impl RngCore) -> Self {
+        fn from_rng<R: Rng + ?Sized>(rng: &mut R) -> Self {
             Self::new_with_keys(rng.next_u64(), rng.next_u64())
+        }
+
+        fn try_from_rng<R: TryRng + ?Sized>(rng: &mut R) -> Result<Self, R::Error> {
+            Ok(Self::new_with_keys(
+                rng.try_next_u64()?,
+                rng.try_next_u64()?,
+            ))
         }
 
         fn seed_from_u64(state: u64) -> Self {
