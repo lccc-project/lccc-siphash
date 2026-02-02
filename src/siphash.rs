@@ -72,7 +72,9 @@ impl SipHashState {
 
     /// Consumes the state and produces the final value.
     ///
-    /// This xors each word of the state array together and returns them. Note that this does not apply the finalization rounds, and you must perform these rounds manually (or call [`update_and_final`])
+    /// This xors each word of the state array together and returns them.
+    /// Note that this does not apply the finalization rounds, and you must perform these rounds manually (or call [`update_and_final`]).
+    /// Additionally, this doesn't fixup the order of the u64
     #[inline]
     pub fn finish(self) -> u64 {
         self.0.finish()
@@ -162,8 +164,15 @@ impl<const C: usize, const D: usize> RawSipHasher<C, D> {
 
     /// Finishes the Hash by performing the finalization steps of a fresh copy of the state, before producing the final value of the hash
     pub fn finish(&self) -> u64 {
-        let state = *self;
-        state.0.update_and_final::<D>().to_le()
+        self.0.update_and_final::<D>().to_le()
+    }
+
+    /// Finishes the Hash by performing the finalization steps of a fresh copy of the state, before producing a 128-bit final value of the hash
+    pub fn finish128(&self) -> u128 {
+        let l = self.0.update_and_final::<D>().to_le() as u128;
+        let h = self.0.update_and_final::<D>().to_le() as u128;
+
+        l | (h << 64)
     }
 
     /// Updates the hash using each 8 byte chunk of `bytes`, padding the remainder (if any) with 0 bytes.
@@ -284,6 +293,14 @@ impl<const C: usize, const D: usize> SipHasher<C, D> {
     /// Convience function that updates the state with the specified word
     pub fn update(&mut self, word: u64) {
         self.state.update_and_round::<C>(word)
+    }
+
+    /// Finishes the Hash by performing the finalization steps of a fresh copy of the state, before producing a 128-bit final value of the hash
+    pub fn finish128(&self) -> u128 {
+        let l = self.state.update_and_final::<D>().to_le() as u128;
+        let h = self.state.update_and_final::<D>().to_le() as u128;
+
+        l | (h << 64)
     }
 
     /// Obtains the underlying raw [`SipHashState`]
