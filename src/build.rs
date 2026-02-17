@@ -9,7 +9,14 @@ use crate::{BuildSipHasher, SipHasher};
 /// The resulting [`RandomState`] will then produce equal [`SipHasher`] instances for each [`BuildHasher::build_hasher`] call, but different [`RandomState`] instances will have different values.
 ///
 /// `C` and `D` are the parameters of SipHash-*C*-*D* for the returned [`SipHasher`] instance
+#[derive(Clone, Debug)]
 pub struct RandomState<const C: usize, const D: usize>(BuildSipHasher<C, D>);
+
+impl<const C: usize, const D: usize> Default for RandomState<C, D> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl<const C: usize, const D: usize> RandomState<C, D> {
     /// Constructs a new, unique [`RandomState`] instance.

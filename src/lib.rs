@@ -35,11 +35,14 @@ pub mod rng;
 
 use core::hash::BuildHasher;
 
+#[cfg(feature = "rand_core")]
+use rand_core::{Rng, TryRng};
 pub use siphash::RawSipHasher;
 pub use siphash::SipHashState;
 pub use siphash::SipHasher;
 
 /// Default [`BuildHasher`] for [`SipHasher`]. `C` and `D` are the configuration parameters for SipHash-*C*-*D*, specifying the number of update rounds (C) and finalization rounds (D).
+#[derive(Clone, Debug)]
 pub struct BuildSipHasher<const C: usize, const D: usize> {
     k0: u64,
     k1: u64,
@@ -49,6 +52,26 @@ impl<const C: usize, const D: usize> BuildSipHasher<C, D> {
     /// Constructs a new [`BuildSipHasher`] with the specified set of keys. All [`BuildSipHasher`] instances constructed with the same keys will produce identical hashers.
     pub const fn new_with_keys(k0: u64, k1: u64) -> Self {
         Self { k0, k1 }
+    }
+
+    /// Constructs a new [`BuildSipHasher`] with keys populated from the specified [`Rng`].
+    /// If the Rng being used is the system rng, it may be better to use [`RandomState`][build::RandomState] instead (and enable the `random_state` feature)
+    #[cfg(feature = "rand_core")]
+    pub fn from_rng<R: Rng>(r: &mut R) -> Self {
+        let k0 = r.next_u64();
+        let k1 = r.next_u64();
+
+        Self::new_with_keys(k0, k1)
+    }
+
+    /// Constructs a new [`BuildSipHasher`] with keys populated from the specified [`TryRng`], failing if an error occurs
+    /// If the Rng being used is the system rng, it may be better to use [`RandomState`][build::RandomState] instead (and enable the `random_state` feature)
+    #[cfg(feature = "rand_core")]
+    pub fn try_from_rng<R: TryRng>(r: &mut R) -> Result<Self, R::Error> {
+        let k0 = r.try_next_u64()?;
+        let k1 = r.try_next_u64()?;
+
+        Ok(Self::new_with_keys(k0, k1))
     }
 }
 
